@@ -1,3 +1,13 @@
+# Cube generated Drivers: always just take the latest
+**/Drivers/
+
+# Cube IDE dumps the binaries to the Release or Debug folders
+**/Debug/
+**/Release/
+
+# Eclipse settings
+**/.settings/
+
 # Prerequisites
 *.d
 
