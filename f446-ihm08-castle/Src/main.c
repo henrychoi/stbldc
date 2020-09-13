@@ -45,6 +45,11 @@ Q_DEFINE_THIS_MODULE(Module_main)
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 
+CAN_HandleTypeDef hcan1;
+
+SPI_HandleTypeDef hspi3;
+DMA_HandleTypeDef hdma_spi3_tx;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 
@@ -57,11 +62,14 @@ UART_HandleTypeDef huart2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_CAN1_Init(void);
+static void MX_SPI3_Init(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -69,6 +77,12 @@ static void MX_NVIC_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void onSPI3DMACplt(struct __DMA_HandleTypeDef* hdma) {
+  GREEN_OFF();
+}
+void onSPI3DMAError(struct __DMA_HandleTypeDef* hdma) {
+  GREEN_OFF();
+}
 
 /* USER CODE END 0 */
 
@@ -100,19 +114,20 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_USART2_UART_Init();
   MX_MotorControl_Init();
+  MX_CAN1_Init();
+  MX_SPI3_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
-#ifdef BB_SPI_CLK_Pin
   SPI_TRACE();
-#endif
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -376,6 +391,83 @@ static void MX_ADC2_Init(void)
 }
 
 /**
+  * @brief CAN1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_CAN1_Init(void)
+{
+
+  /* USER CODE BEGIN CAN1_Init 0 */
+
+  /* USER CODE END CAN1_Init 0 */
+
+  /* USER CODE BEGIN CAN1_Init 1 */
+
+  /* USER CODE END CAN1_Init 1 */
+  hcan1.Instance = CAN1;
+  hcan1.Init.Prescaler = 16;
+  hcan1.Init.Mode = CAN_MODE_NORMAL;
+  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_1TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan1.Init.TimeTriggeredMode = DISABLE;
+  hcan1.Init.AutoBusOff = DISABLE;
+  hcan1.Init.AutoWakeUp = DISABLE;
+  hcan1.Init.AutoRetransmission = ENABLE;
+  hcan1.Init.ReceiveFifoLocked = DISABLE;
+  hcan1.Init.TransmitFifoPriority = DISABLE;
+  if (HAL_CAN_Init(&hcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN CAN1_Init 2 */
+
+  /* USER CODE END CAN1_Init 2 */
+
+}
+
+/**
+  * @brief SPI3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI3_Init(void)
+{
+
+  /* USER CODE BEGIN SPI3_Init 0 */
+
+  /* USER CODE END SPI3_Init 0 */
+
+  /* USER CODE BEGIN SPI3_Init 1 */
+
+  /* USER CODE END SPI3_Init 1 */
+  /* SPI3 parameter configuration*/
+  hspi3.Instance = SPI3;
+  hspi3.Init.Mode = SPI_MODE_MASTER;
+  hspi3.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi3.Init.DataSize = SPI_DATASIZE_16BIT;
+  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi3.Init.NSS = SPI_NSS_SOFT;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi3.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI3_Init 2 */
+  // HAL is not calling this back
+  hdma_spi3_tx.XferCpltCallback = onSPI3DMACplt;
+  hdma_spi3_tx.XferErrorCallback = onSPI3DMAError;
+  /* USER CODE END SPI3_Init 2 */
+
+}
+
+/**
   * @brief TIM1 Initialization Function
   * @param None
   * @retval None
@@ -554,6 +646,22 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Stream5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -569,107 +677,28 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, RED_Pin|BLUE_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, RED_Pin|GREEN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, BB_SPI_CLK_Pin|BB_SPI_MOSI_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pins : RED_Pin BLUE_Pin */
-  GPIO_InitStruct.Pin = RED_Pin|BLUE_Pin;
+  /*Configure GPIO pins : RED_Pin GREEN_Pin */
+  GPIO_InitStruct.Pin = RED_Pin|GREEN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BB_SPI_CLK_Pin BB_SPI_MOSI_Pin */
-  GPIO_InitStruct.Pin = BB_SPI_CLK_Pin|BB_SPI_MOSI_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
 }
 
 /* USER CODE BEGIN 4 */
-#ifdef BB_SPI_CLK_Pin
-#include <stdarg.h>
-
 #define SPI_LOG_WORD_WIDTH 16
-
-# if SPI_LOG_WORD_WIDTH==32
-void BBSpiMode0_write_only(uint32_t wb) {
-  uint32_t msk = 1UL << (SPI_LOG_WORD_WIDTH-1);
-  do {
-    BB_SPI_CLK_GPIO_Port->ODR &= ~BB_SPI_CLK_Pin; // deassert CLK
-    if(wb & msk) { // set MOSI
-      BB_SPI_MOSI_GPIO_Port->ODR |=  BB_SPI_MOSI_Pin;
-    } else {
-      BB_SPI_MOSI_GPIO_Port->ODR &= ~BB_SPI_MOSI_Pin;
-    }
-    BB_SPI_CLK_GPIO_Port->ODR |= BB_SPI_CLK_Pin; // assert CLK
-    // The slave will read the MOSI pin during the transition
-    //BB_SPI_CLK_GPIO_Port->ODR &= ~BB_SPI_CLK_Pin; // deassert CLK
-  } while(msk>>=1);
-  BB_SPI_CLK_GPIO_Port->ODR &= ~BB_SPI_CLK_Pin; // deassert CLK
-}
-
+#include <stdarg.h>
 struct LogItem {
-  uint16_t loc;
-  uint8_t module;
   uint8_t n;
-  uint32_t arg[4];
+  uint8_t module;
+  uint16_t loc;
+  uint16_t arg[8];
 } __attribute__((aligned(4)));
 
-void spilog(uint8_t module, uint16_t loc, const char* fmt, ...) {
-  struct LogItem log;
-  uint8_t n = 0;
-  log.module = module;
-  log.loc = loc;
-
-  if (fmt && *fmt) {
-    union Accum { uint32_t dw; uint16_t uw[2]; int16_t sw[2]; } tmp = { .dw = 0 };
-    bool even = false;
-    va_list args;
-    va_start(args, fmt);
-    for ( ; *fmt && n < Q_DIM(log.arg); ++fmt) {
-      switch (*fmt) {
-	case 'h': // short
-	  tmp.sw[even] = (int16_t)va_arg(args, int);
-	  even = !even;
-	  if (!even) log.arg[n++] = tmp.dw;
-	  break;
-
-	case '2': // unsigned short (should be hu but I got lazy)
-	  tmp.uw[even] = (uint16_t)va_arg(args, int);
-	  even = !even;
-	  if (!even) log.arg[n++] = tmp.dw;
-	  break;
-
-	case 'd':
-	  *((int32_t*)&log.arg[n++]) =  va_arg(args, int);
-	  break;
-
-	case '4':
-	  log.arg[n++] = va_arg(args, unsigned);
-          break;
-
-	default: break;
-      }
-    }
-    va_end(args);
-  }
-  log.n = n;
-
-  // write out the MOSI now
-  const uint32_t* p = (const uint32_t*)&log;
-  BBSpiMode0_write_only(*p); // write header
-  for (unsigned i=0; i < log.n; ++i) { //write arguments
-    BBSpiMode0_write_only(*++p);
-  }
-}
-# endif
-
-# if SPI_LOG_WORD_WIDTH==16
+#ifdef BB_SPI_CLK_Pin // bit-bang SPI
 void BBSpiMode0_write_only(uint16_t wb) {
   uint32_t msk = 1UL << (SPI_LOG_WORD_WIDTH-1);
   do {
@@ -685,13 +714,7 @@ void BBSpiMode0_write_only(uint16_t wb) {
   } while(msk>>=1);
   BB_SPI_CLK_GPIO_Port->ODR &= ~BB_SPI_CLK_Pin; // deassert CLK
 }
-
-struct LogItem {
-  uint8_t n;
-  uint8_t module;
-  uint16_t loc;
-  uint16_t arg[8];
-} __attribute__((aligned(4)));
+#endif
 
 void spilog(uint8_t module, uint16_t loc, const char* fmt, ...) {
   struct LogItem log;
@@ -741,6 +764,7 @@ void spilog(uint8_t module, uint16_t loc, const char* fmt, ...) {
   }
   log.n = n;
 
+#ifdef BB_SPI_CLK_Pin // bit-bang SPI
   // write out the MOSI now
   const uint16_t* p = (const uint16_t*)&log;
   BBSpiMode0_write_only(*p); // write header
@@ -748,9 +772,16 @@ void spilog(uint8_t module, uint16_t loc, const char* fmt, ...) {
   for (unsigned i=0; i < log.n; ++i) { //write arguments
     BBSpiMode0_write_only(*++p);
   }
-}
-# endif
+#else // use SPI DMA
+//GREEN_ON();
+  if (HAL_SPI_Transmit_DMA(&hspi3, (uint8_t*)&log, 2 + log.n) != HAL_OK) {
+    (void)hspi3.State;
+  }
+//while (hspi3.State != HAL_SPI_STATE_READY) {}
+//GREEN_OFF();
 #endif
+}
+
 /* USER CODE END 4 */
 
 /**

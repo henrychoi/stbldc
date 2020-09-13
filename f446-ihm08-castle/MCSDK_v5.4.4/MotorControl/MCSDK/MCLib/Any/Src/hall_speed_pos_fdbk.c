@@ -22,7 +22,6 @@
 #include "speed_pos_fdbk.h"
 #include "hall_speed_pos_fdbk.h"
 #include "mc_type.h"
-#include "main.h"
 
 /** @addtogroup MCSDK
   * @{
@@ -364,8 +363,6 @@ __weak void * HALL_TIMx_CC_IRQHandler( void * pHandleVoid )
   uint16_t hPrscBuf;
   uint16_t hHighSpeedCapture;
 
-  BLUE_ON();
-
   if ( pHandle->SensorIsReliable )
   {
     /* A capture event generated this interrupt */
@@ -632,7 +629,6 @@ __weak void * HALL_TIMx_CC_IRQHandler( void * pHandleVoid )
       pHandle->OVFCounter = 0u;
     }
   }
-  BLUE_OFF();
   return MC_NULL;
 }
 
@@ -653,7 +649,7 @@ __weak void * HALL_TIMx_UP_IRQHandler( void * pHandleVoid )
 {
   HALL_Handle_t * pHandle = ( HALL_Handle_t * ) pHandleVoid;
   TIM_TypeDef * TIMx = pHandle->TIMx;
-  RED_ON();
+
   if ( pHandle->SensorIsReliable )
   {
     uint16_t hMaxTimerOverflow;
@@ -688,7 +684,6 @@ __weak void * HALL_TIMx_UP_IRQHandler( void * pHandleVoid )
       pHandle->ElPeriodSum =pHandle->MaxPeriod * pHandle->SpeedBufferSize;
     }
   }
-  RED_OFF();
   return MC_NULL;
 }
 

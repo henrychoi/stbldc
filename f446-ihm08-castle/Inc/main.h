@@ -112,14 +112,10 @@ void Error_Handler(void);
 #define M1_PWM_WH_GPIO_Port GPIOA
 #define M1_HALL_H1_Pin GPIO_PIN_15
 #define M1_HALL_H1_GPIO_Port GPIOA
-#define BB_SPI_CLK_Pin GPIO_PIN_10
-#define BB_SPI_CLK_GPIO_Port GPIOC
-#define BB_SPI_MOSI_Pin GPIO_PIN_11
-#define BB_SPI_MOSI_GPIO_Port GPIOC
 #define M1_HALL_H2_Pin GPIO_PIN_3
 #define M1_HALL_H2_GPIO_Port GPIOB
-#define BLUE_Pin GPIO_PIN_4
-#define BLUE_GPIO_Port GPIOB
+#define GREEN_Pin GPIO_PIN_4
+#define GREEN_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 #ifdef RED_Pin
@@ -130,12 +126,12 @@ void Error_Handler(void);
 # define RED_OFF()
 #endif
 
-#ifdef BLUE_Pin
-# define BLUE_ON()  (BLUE_GPIO_Port)->ODR |=  BLUE_Pin
-# define BLUE_OFF() (BLUE_GPIO_Port)->ODR &= ~BLUE_Pin
+#ifdef GREEN_Pin
+# define GREEN_ON()  (GREEN_GPIO_Port)->ODR |=  GREEN_Pin
+# define GREEN_OFF() (GREEN_GPIO_Port)->ODR &= ~GREEN_Pin
 #else
-# define BLUE_ON()
-# define BLUE_OFF()
+# define GREEN_ON()
+# define GREEN_OFF()
 #endif
 /* USER CODE END Private defines */
 

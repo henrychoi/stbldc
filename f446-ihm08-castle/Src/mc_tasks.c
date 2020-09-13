@@ -660,7 +660,7 @@ __weak uint8_t TSK_HighFrequencyTask(void)
 
   HALL_CalcElAngle (&HALL_M1);
 
-  /* USER CODE BEGIN HighFrequency“Task SINGLEDRIVE_1 */
+  /* USER CODE BEGIN HighFrequencyTask SINGLEDRIVE_1 */
 
   /* USER CODE END HighFrequencyTask SINGLEDRIVE_1 */
   hFOCreturn = FOC_CurrControllerM1();
