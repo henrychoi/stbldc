@@ -104,7 +104,7 @@ struct FastTrace {
 static struct FastTrace sFastTrace[0x40];
 static uint8_t iFastTrace = 0;
 static void FastTrace_write(struct FastTrace* trace) {
-  trace->bitmap = (HALL_M1.SensorIsReliable << 7) | HALL_M1.Direction;
+  trace->bitmap = (HALL_M1.SensorIsReliable << 1) | HALL_M1.Direction;
   trace->HallState = HALL_M1.HallState;
   trace->ElAngle = HALL_M1.MeasuredElAngle;
   trace->ElSpeed = HALL_M1.AvrElSpeedDpp;
@@ -122,7 +122,7 @@ struct MedTrace {
 };
 
 // 256 @ 1000 Hz, 5 RPS should cover at least 1 period
-static struct MedTrace sMedTrace[0x100];
+static struct MedTrace sMedTrace[0x40];
 static uint8_t iMedTrace = 0;
 
 /* USER CODE END Private Variables */
@@ -358,7 +358,7 @@ __weak void MC_Scheduler(void)
 __weak void TSK_MediumFrequencyTaskM1(void)
 {
   /* USER CODE BEGIN MediumFrequencyTask M1 0 */
-  //RED_LED_ON();
+  RED_ON();
   /* USER CODE END MediumFrequencyTask M1 0 */
 
   State_t StateM1;
@@ -479,14 +479,22 @@ __weak void TSK_MediumFrequencyTaskM1(void)
 
   /* USER CODE BEGIN MediumFrequencyTask M1 6 */
   //SPI_LOG("hh", HALL_M1.MeasuredElAngle, SPD_GetElAngle(&STO_PLL_M1._Super));
+#if 1
   struct MedTrace* trace = &sMedTrace[iFastTrace];
   FastTrace_write(&trace->_Super);
+  trace->_Super.bitmap |= 0x80;
   trace->speed = SPD_GetAvrgMecSpeedUnit(&HALL_M1._Super);
   trace->target = pSTC[M1]->TargetFinal;
   trace->Iqdref = FOCVars[M1].Iqdref;
+  // write this to the host for debugging
+  extern UART_HandleTypeDef huart6;
+  if (HAL_UART_Transmit_DMA(&huart6, (uint8_t*)trace, sizeof(*trace)) != HAL_OK) {
+      SPI_TRACE();
+  }
   ++iMedTrace;
   iMedTrace &= Q_DIM(sMedTrace) - 1;
-  //RED_LED_OFF();
+#endif
+  RED_OFF();
   /* USER CODE END MediumFrequencyTask M1 6 */
 }
 
@@ -652,7 +660,7 @@ __attribute__((section (".ccmram")))
 __weak uint8_t TSK_HighFrequencyTask(void)
 {
   /* USER CODE BEGIN HighFrequencyTask 0 */
-  //RED_GPIO_Port->ODR |= RED_Pin;
+  GREEN_ON();
   /* USER CODE END HighFrequencyTask 0 */
 
   uint8_t bMotorNbr = 0;
@@ -678,11 +686,13 @@ __weak uint8_t TSK_HighFrequencyTask(void)
     /* USER CODE END HighFrequencyTask SINGLEDRIVE_3 */
   }
   /* USER CODE BEGIN HighFrequencyTask 1 */
-  //RED_GPIO_Port->ODR &= ~RED_Pin;
+#if 1
   struct FastTrace* trace = &sFastTrace[iFastTrace];
   FastTrace_write(trace);
   ++iFastTrace;
   iFastTrace &= Q_DIM(sFastTrace) - 1;
+#endif
+  GREEN_OFF();
   /* USER CODE END HighFrequencyTask 1 */
 
   return bMotorNbr;
