@@ -91,14 +91,14 @@ uint8_t bMCBootCompleted = 0;
 
 /* USER CODE BEGIN Private Variables */
 struct FastTrace {
-  uint8_t bitmap;  // 0
+  uint8_t bitmap;
   uint8_t HallState;
-  int16_t ElAngle;
-  int16_t ElSpeed; // 4
-  ab_t Iab; // 6
-  qd_t Iqd; // 10
-  //qd_t Vqd; // 14
-  alphabeta_t Valphabeta; // 14-17
+  int16_t ElAngle; // 4
+  int16_t ElSpeed;
+  ab_t Iab; // 8
+  qd_t Iqd; // 12
+  //qd_t Vqd;
+  alphabeta_t Valphabeta; // 16
 };
 
 static struct FastTrace sFastTrace[0x40];
@@ -116,14 +116,17 @@ static void FastTrace_write(struct FastTrace* trace) {
 }
 
 struct MedTrace {
+  uint8_t pad;
+  uint8_t seq;
   struct FastTrace _Super;
-  int16_t speed, target; // 18-21
-  qd_t Iqdref; // 22-25
+  int16_t speed, target; // 20
+  qd_t Iqdref; // 24
 };
-
+#if 0
 // 256 @ 1000 Hz, 5 RPS should cover at least 1 period
 static struct MedTrace sMedTrace[0x40];
 static uint8_t iMedTrace = 0;
+#endif
 
 /* USER CODE END Private Variables */
 
@@ -141,7 +144,22 @@ void TSK_SafetyTask_PWMOFF(uint8_t motor);
 void UI_Scheduler(void);
 
 /* USER CODE BEGIN Private Functions */
+uint8_t COBS(const uint8_t *ptr, uint8_t length, uint8_t *dst) {
+  //*dst++ = 0; // encode the beginning
+  uint8_t* start = dst;
+  uint8_t code = 1, *code_ptr = dst++; // Where to insert the leading count
 
+  while (length--) {
+    if (*ptr) // Input byte not zero; just copy
+      *dst++ = *ptr, ++code;
+
+    if (!*ptr++ || code == 0xFF) // Input is zero or complete block
+      *code_ptr = code, code = 1, code_ptr = dst++;
+  }
+  *code_ptr = code; /* Final code */
+
+  return dst - start;
+}
 /* USER CODE END Private Functions */
 /**
   * @brief  It initializes the whole MC core according to user defined
@@ -480,19 +498,25 @@ __weak void TSK_MediumFrequencyTaskM1(void)
   /* USER CODE BEGIN MediumFrequencyTask M1 6 */
   //SPI_LOG("hh", HALL_M1.MeasuredElAngle, SPD_GetElAngle(&STO_PLL_M1._Super));
 #if 1
-  struct MedTrace* trace = &sMedTrace[iFastTrace];
-  FastTrace_write(&trace->_Super);
-  trace->_Super.bitmap |= 0x80;
-  trace->speed = SPD_GetAvrgMecSpeedUnit(&HALL_M1._Super);
-  trace->target = pSTC[M1]->TargetFinal;
-  trace->Iqdref = FOCVars[M1].Iqdref;
+  static uint8_t sSN = 0;
+  struct MedTrace trace; // = &sMedTrace[iFastTrace];
+  trace.seq = ++sSN;
+  FastTrace_write(&trace._Super);
+  trace._Super.bitmap |= StateM1 << 2;
+  trace.speed = SPD_GetAvrgMecSpeedUnit(&HALL_M1._Super);
+  trace.target = pSTC[M1]->TargetFinal;
+  trace.Iqdref = FOCVars[M1].Iqdref;
+  static uint8_t cobsBuffer[sizeof(trace) + 2] = {0};
+  const uint8_t cobsLen = COBS(&trace.seq, sizeof(trace)-1 // less pad
+			       , cobsBuffer + 1);
+
   // write this to the host for debugging
   extern UART_HandleTypeDef huart6;
-  if (HAL_UART_Transmit_DMA(&huart6, (uint8_t*)trace, sizeof(*trace)) != HAL_OK) {
-      SPI_TRACE();
+  if (HAL_UART_Transmit_DMA(&huart6, cobsBuffer, cobsLen+1) != HAL_OK) {
+    SPI_TRACE();
   }
-  ++iMedTrace;
-  iMedTrace &= Q_DIM(sMedTrace) - 1;
+//  ++iMedTrace;
+//  iMedTrace &= Q_DIM(sMedTrace) - 1;
 #endif
   RED_OFF();
   /* USER CODE END MediumFrequencyTask M1 6 */
