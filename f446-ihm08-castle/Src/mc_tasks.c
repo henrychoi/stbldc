@@ -94,7 +94,6 @@ struct FastTrace {
   uint8_t bitmap;
   uint8_t HallState;
   int16_t ElAngle; // 4
-  int16_t ElSpeed;
   ab_t Iab; // 8
   qd_t Iqd; // 12
   //qd_t Vqd;
@@ -107,7 +106,6 @@ static void FastTrace_write(struct FastTrace* trace) {
   trace->bitmap = (HALL_M1.SensorIsReliable << 1) | HALL_M1.Direction;
   trace->HallState = HALL_M1.HallState;
   trace->ElAngle = HALL_M1.MeasuredElAngle;
-  trace->ElSpeed = HALL_M1.AvrElSpeedDpp;
   //trace->error = hFOCreturn;
   trace->Iab = FOCVars[M1].Iab;
   trace->Iqd = FOCVars[M1].Iqd;
@@ -119,8 +117,10 @@ struct MedTrace {
   uint8_t pad;
   uint8_t seq;
   struct FastTrace _Super;
-  int16_t speed, target; // 20
-  qd_t Iqdref; // 24
+  int16_t ElSpeed;
+//int16_t speed
+  int16_t target;
+  qd_t Iqdref;
 };
 #if 0
 // 256 @ 1000 Hz, 5 RPS should cover at least 1 period
@@ -503,7 +503,7 @@ __weak void TSK_MediumFrequencyTaskM1(void)
   trace.seq = ++sSN;
   FastTrace_write(&trace._Super);
   trace._Super.bitmap |= StateM1 << 2;
-  trace.speed = SPD_GetAvrgMecSpeedUnit(&HALL_M1._Super);
+  trace.ElSpeed = HALL_M1.AvrElSpeedDpp;
   trace.target = pSTC[M1]->TargetFinal;
   trace.Iqdref = FOCVars[M1].Iqdref;
   static uint8_t cobsBuffer[sizeof(trace) + 2] = {0};
