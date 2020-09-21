@@ -41,7 +41,7 @@
                                    *Amplifying network gain)/(MCU supply voltage/2)
 */
 
-#define NOMINAL_CURRENT         5143
+#define NOMINAL_CURRENT         5143*3
 #define MOTOR_MAX_SPEED_RPM     14868 /*!< Maximum rated speed  */
 #define MOTOR_VOLTAGE_CONSTANT  0.2 /*!< Volts RMS ph-ph /kRPM */
 #define ID_DEMAG                -5143 /*!< Demagnetization current */
@@ -57,7 +57,7 @@
                                                  It can be either DEGREES_120 or
                                                  DEGREES_60 */
 
-#define HALL_PHASE_SHIFT        0 /*!< Define here in degrees
+#define HALL_PHASE_SHIFT        189 /*!< Define here in degrees
                                                  the electrical phase shift between
                                                  the low to high transition of
                                                  signal H1 and the maximum of

@@ -1,5 +1,5 @@
 #!env python3
-
+# sudo pip3 install pyserial cobs
 import sys
 import serial
 import select
@@ -103,6 +103,7 @@ def main(argv):
                     #if c == 'q': break
                     break # don't care what the key was
         # ser.close()
+        return
 
     # Plot
     # read the data file back again; faster than building up the data file 1 row at a time
@@ -118,7 +119,7 @@ def main(argv):
     target = target * 0.1
     Vdd = 3.3; Rshunt = 0.01; Gaop = 5.18
     Imax = Vdd / (2 * Rshunt * Gaop)
-    Vmax = 12.0
+    Vmax = 3.3 * 19.17 # voltage divider gain is 19.17
     Ia = Ia * Imax / 0x8000; Ib = Ib * Imax / 0x8000
     Id = Id * Imax / 0x8000; Iq = Iq * Imax / 0x8000
     Idref = Idref * Imax / 0x8000; Iqref = Iqref * Imax / 0x8000
@@ -140,7 +141,7 @@ def main(argv):
     yy2 = yy1.twinx()
     yy2.scatter(t, hallState, label='Hall')
     yy2.plot(t, eSpeed, label='Espeed [rad/s]')
-    yy2.plot(t, target, label='target [rad/s]')
+    yy2.plot(t, target, 'k', label='target [rad/s]')
     yy2.set(ylabel='[1/s]')
     yy2.legend()
 
@@ -157,8 +158,8 @@ def main(argv):
     yy1.legend(bbox_to_anchor=(0, 1.02, 1., .102), ncol=6, mode="expand", borderaxespad=0.5)
 
     yy2 = yy1.twinx()
-    yy2.plot(t, Valph, ls='--', label=r'$V_\alpha$')
-    yy2.plot(t, Vbeta, ls='--', label=r'$V_\beta$')
+    yy2.plot(t, Valph, 'b', ls='--', label=r'$V_\alpha$')
+    yy2.plot(t, Vbeta, 'g', ls='--', label=r'$V_\beta$')
     yy2.set(ylabel='[V]')
     yy2.legend()
 
