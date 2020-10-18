@@ -46,7 +46,7 @@
 #define HALL_AVERAGING_FIFO_DEPTH        6 /*!< depth of the FIFO used to
                                                            average mechanical speed in
                                                            0.1Hz resolution */
-#define HALL_MTPA  1
+#define HALL_MTPA  true
 
 /* USER CODE BEGIN angle reconstruction M1 */
 #define REV_PARK_ANGLE_COMPENSATION_FACTOR 0
@@ -103,7 +103,7 @@
 /* USER CODE END PID_SPEED_INTEGRAL_INIT_DIV */
 
 #define SPD_DIFFERENTIAL_TERM_ENABLING DISABLE
-#define IQMAX                          5143
+#define IQMAX                          30860
 
 /* Default settings */
 #define DEFAULT_CONTROL_MODE           STC_SPEED_MODE /*!< STC_TORQUE_MODE or

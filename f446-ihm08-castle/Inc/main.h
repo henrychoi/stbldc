@@ -61,11 +61,11 @@ void spilog(uint8_t file, uint16_t loc, const char* fmt, ...);
 
 // @precondition a static Module declaration is necessary for all callers
 // @note ## is necessary to support 0 argument
-#define SPI_LOG(fmt_, ...) spilog(Q_this_module_, __LINE__, fmt_, ##__VA_ARGS__)
+#define SPI_LOG(fmt_, ...) //spilog(Q_this_module_, __LINE__, fmt_, ##__VA_ARGS__)
 
 // @brief Just a "I am here" message
 // @precondition a static File declaration is necessary in all files that calls SPI_LOG
-#define SPI_TRACE() spilog(Q_this_module_, __LINE__, NULL)
+#define SPI_TRACE() //spilog(Q_this_module_, __LINE__, NULL)
 /* USER CODE END EM */
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
@@ -132,6 +132,22 @@ void Error_Handler(void);
 #else
 # define GREEN_ON()
 # define GREEN_OFF()
+#endif
+
+#ifdef DBG1_Pin
+# define DBG1_ON()  (DBG1_GPIO_Port)->ODR |=  DBG1_Pin
+# define DBG1_OFF() (DBG1_GPIO_Port)->ODR &= ~DBG1_Pin
+#else
+# define DBG1_ON()
+# define DBG1_OFF()
+#endif
+
+#ifdef DBG2_Pin
+# define DBG2_ON()  (DBG2_GPIO_Port)->ODR |=  DBG2_Pin
+# define DBG2_OFF() (DBG2_GPIO_Port)->ODR &= ~DBG2_Pin
+#else
+# define DBG2_ON()
+# define DBG2_OFF()
 #endif
 /* USER CODE END Private defines */
 

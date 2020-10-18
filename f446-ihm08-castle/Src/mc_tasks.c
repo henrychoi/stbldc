@@ -94,8 +94,10 @@ struct FastTrace {
   uint8_t bitmap;
   uint8_t HallState;
   int16_t ElAngle; // 4
+
   ab_t Iab; // 8
   qd_t Iqd; // 12
+
   //qd_t Vqd;
   alphabeta_t Valphabeta; // 16
 };
@@ -114,14 +116,18 @@ static void FastTrace_write(struct FastTrace* trace) {
 }
 
 struct MedTrace {
-  uint8_t pad;
+  uint8_t pad; // this is to ensure no padding in the middle
   uint8_t seq;
+
   struct FastTrace _Super;
+
   int16_t ElSpeed;
 //int16_t speed
   int16_t target;
   qd_t Iqdref;
+  uint8_t justToAlignToDword;
 };
+
 #if 0
 // 256 @ 1000 Hz, 5 RPS should cover at least 1 period
 static struct MedTrace sMedTrace[0x40];
@@ -160,6 +166,26 @@ uint8_t COBS(const uint8_t *ptr, uint8_t length, uint8_t *dst) {
 
   return dst - start;
 }
+#define COBS_ENCODING 0x00
+static uint8_t cobsBuffer[sizeof(struct MedTrace) + 2] = {COBS_ENCODING};
+// COBS encode raw bytes AFTER the pad
+//const uint8_t cobsLen = COBS((const uint8_t*)&trace + 1, sizeof(trace)-1
+//			     , cobsBuffer + 1); // skip the delimiter
+
+// To fake a UART, 8 bit, no parity, 1 stop bit, a byte `bxxxx_xxxx has to expand out to:
+// `b0xxxx_xxxx1, or `b0xxx_xxxx `bx1.  A dword WZYX (XYZW in little endian form)
+// `bxxxx_xxxx `byyyy_yyyy `bzzzz_zzzz `bwwww_wwww
+// then expands out to 5 bytes when the start and stop bits are inserted:
+// `b0xxx_xxxx `bx10y_yyyy `byyy1_0zzz `bzzzz_zwww `b10ww_www1
+// This is a bitwise or of the encoding and data:
+// `b0000_0000  `bx100_0000    `b0001_0000    `b0000_0000   `b1000_0001
+// |
+// `b0xxx_xxxx  `bx00y_yyyy    `byyy0_0zzz    `bzzzz_zwww   `b00ww_www0
+// which can be written as bitwise of the frame and shifted data:
+// 0x00         0x40           0x10           0x00           0x81
+// |
+// X>>1         X<<7 | Y>>3    Y<<5 | Z>>5    Z<<3 | W>>5    (W<<1) & 0x3F
+
 /* USER CODE END Private Functions */
 /**
   * @brief  It initializes the whole MC core according to user defined
@@ -175,7 +201,7 @@ uint8_t COBS(const uint8_t *ptr, uint8_t length, uint8_t *dst) {
 __weak void MCboot( MCI_Handle_t* pMCIList[NBR_OF_MOTORS],MCT_Handle_t* pMCTList[NBR_OF_MOTORS] )
 {
   /* USER CODE BEGIN MCboot 0 */
-
+  cobsBuffer[sizeof(cobsBuffer) - 1] = ~COBS_ENCODING;
   /* USER CODE END MCboot 0 */
 
   /**************************************/
@@ -497,7 +523,7 @@ __weak void TSK_MediumFrequencyTaskM1(void)
 
   /* USER CODE BEGIN MediumFrequencyTask M1 6 */
   //SPI_LOG("hh", HALL_M1.MeasuredElAngle, SPD_GetElAngle(&STO_PLL_M1._Super));
-#if 1
+#if 0
   static uint8_t sSN = 0;
   struct MedTrace trace; // = &sMedTrace[iFastTrace];
   trace.seq = ++sSN;
@@ -506,14 +532,11 @@ __weak void TSK_MediumFrequencyTaskM1(void)
   trace.ElSpeed = HALL_M1.AvrElSpeedDpp;
   trace.target = pSTC[M1]->TargetFinal;
   trace.Iqdref = FOCVars[M1].Iqdref;
-  static uint8_t cobsBuffer[sizeof(trace) + 2] = {0};
-  const uint8_t cobsLen = COBS(&trace.seq, sizeof(trace)-1 // less pad
-			       , cobsBuffer + 1);
 
   // write this to the host for debugging
-  extern UART_HandleTypeDef huart6;
-  if (HAL_UART_Transmit_DMA(&huart6, cobsBuffer, cobsLen+1) != HAL_OK) {
-    SPI_TRACE();
+  extern SPI_HandleTypeDef hspi2;
+  if (HAL_SPI_Transmit_DMA(&hspi2, (uint8_t*)&log, 2 + log.n) != HAL_OK) {
+    (void)hspi3.State;
   }
 //  ++iMedTrace;
 //  iMedTrace &= Q_DIM(sMedTrace) - 1;
